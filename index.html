@@ -10,7 +10,7 @@
         .life { width: 30px; height: 30px; background-size: contain; background-repeat: no-repeat; transition: 0.3s; }
         #p-wrap { width: 200px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
         #p-bar { width: 0%; height: 100%; transition: 0.3s; }
-        .card { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 10px; box-sizing: border-box; user-select: none; }
+        .card { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 10px; box-sizing: border-box; user-select: none; transition: outline 0.1s; }
         .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; color: white; text-align: center; padding: 20px; background: rgba(0,0,0,0.95); }
         .overlay img { max-height: 200px; margin-bottom: 20px; border-radius: 15px; display: none; }
         button { padding: 15px 30px; cursor: pointer; border-radius: 10px; border: none; font-weight: bold; font-size: 18px; color: #000; }
@@ -21,13 +21,14 @@
     <div id="ui"><div id="lives"></div><div id="p-wrap"><div id="p-bar"></div></div></div>
     <div id="game"></div><img id="fb">
     <div id="start-screen" class="overlay"><h1 id="st-t"></h1><p id="st-d"></p><button id="st-b" onclick="startGame()"></button></div>
-    <div id="win-screen" class="overlay" style="display:none;"><img id="wi-img" src=""><h1 id="wt"></h1><p id="wd"></p><button class="rb" onclick="location.reload()"></button></div>
-    <div id="lose-screen" class="overlay" style="display:none;"><img id="li-img" src=""><h1 id="lt"></h1><p id="ld"></p><button class="rb" onclick="location.reload()"></button></div>
+    <div id="win-screen" class="overlay" style="display:none;"><img id="wi-img"><h1 id="wt"></h1><p id="wd"></h1><button class="rb" onclick="location.reload()"></button></div>
+    <div id="lose-screen" class="overlay" style="display:none;"><img id="li-img"><h1 id="lt"></h1><p id="ld"></h1><button class="rb" onclick="location.reload()"></button></div>
 
 <script>
     const params = new URLSearchParams(window.location.search);
     const get = (n, d) => { let v = params.get(n); return (v===null||v==='null'||v==='') ? d : v; };
 
+    // Шрифт и Эффекты
     const font = get('font', 'Arial');
     if (font !== 'Arial') {
         const link = document.createElement('link');
@@ -37,47 +38,62 @@
         document.body.style.fontFamily = `'${font}', sans-serif`;
     }
 
-    document.getElementById('st-t').textContent = get('st_t', 'Привет!');
-    document.getElementById('st-d').textContent = get('st_d', 'Найди пары');
-    document.getElementById('st-b').textContent = get('st_b', 'ИГРАТЬ');
+    // Тексты
+    document.getElementById('st-t').innerText = get('st_t', 'Привет!');
+    document.getElementById('st-d').innerText = get('st_d', 'Найди пары');
+    document.getElementById('st-b').innerText = get('st_b', 'ИГРАТЬ');
     document.getElementById('st-b').style.background = get('pcolor', '#03dac6');
-    document.getElementById('wt').textContent = get('wt', 'Победа!');
-    document.getElementById('wd').textContent = get('wd', 'Молодец!');
-    document.getElementById('lt').textContent = get('lt', 'Ой!');
-    document.getElementById('ld').textContent = get('ld', 'Попробуй еще раз');
-    document.querySelectorAll('.rb').forEach(b => { b.textContent = get('rb', 'ЗАНОВО'); b.style.background = get('pcolor', '#03dac6'); });
+    document.getElementById('wt').innerText = get('wt', 'Победа!');
+    document.getElementById('wd').innerText = get('wd', 'Молодец!');
+    document.getElementById('lt').innerText = get('lt', 'Ой!');
+    document.getElementById('ld').innerText = get('ld', 'Попробуй еще раз');
+    document.querySelectorAll('.rb').forEach(b => { b.innerText = get('rb', 'ЗАНОВО'); b.style.background = get('pcolor', '#03dac6'); });
 
-    const wi = get('wi'); if(wi) { const i = document.getElementById('wi-img'); i.src = wi; i.style.display='block'; }
-    const li = get('li'); if(li) { const i = document.getElementById('li-img'); i.src = li; i.style.display='block'; }
+    // Финальные картинки
+    if(get('wi')) { const i=document.getElementById('wi-img'); i.src=get('wi'); i.style.display='block'; }
+    if(get('li')) { const i=document.getElementById('li-img'); i.src=get('li'); i.style.display='block'; }
 
+    // ЛОГИКА РАНДОМА И ПУСТЫШЕК
     let allData = []; try { allData = JSON.parse(get('all_data', '[]')); } catch(e) {}
     allData.sort(() => Math.random() - 0.5);
+    
     const limit = parseInt(get('limit', 2));
-    const extraCount = parseInt(get('extra_c', 2));
+    const extraCount = parseInt(get('extra_c', 0));
+    
     const activePairs = allData.slice(0, limit);
-    const rejected = allData.slice(limit);
-    let trapPool = []; rejected.forEach(p => { trapPool.push(p.a); trapPool.push(p.b); });
-    trapPool.sort(() => Math.random() - 0.5);
-    const traps = trapPool.slice(0, extraCount);
-
+    const remaining = allData.slice(limit);
+    
     let deck = [];
-    activePairs.forEach((p, i) => { deck.push({t: p.a, id: i}); deck.push({t: p.b, id: i}); });
-    traps.forEach((t, i) => { deck.push({t: t, id: -100 - i}); });
+    activePairs.forEach((p, i) => { 
+        deck.push({t: p.a, id: i}); 
+        deck.push({t: p.b, id: i}); 
+    });
+
+    // Делаем ловушки строго одиночками
+    let trapPool = [];
+    remaining.forEach(p => { trapPool.push(Math.random() > 0.5 ? p.a : p.b); });
+    trapPool.sort(() => Math.random() - 0.5);
+    const finalTraps = trapPool.slice(0, extraCount);
+    finalTraps.forEach((t, i) => { deck.push({t: t, id: -100 - i}); });
+
     deck.sort(() => Math.random() - 0.5);
 
+    // Параметры карточек
     const speed = parseFloat(get('speed', 2));
     const cSize = parseInt(get('csize', 140));
+    const fSize = get('fsize', '25');
     let lives = 3, found = 0, selected = [], cards = [], gameStarted = false;
+
     document.getElementById('p-bar').style.backgroundColor = get('pcolor', '#03dac6');
     const lDiv = document.getElementById('lives');
     for(let i=0; i<3; i++) lDiv.innerHTML += `<div class="life" style="background-image:url('${get('lifeimg','')}')"></div>`;
 
     deck.forEach(item => {
         const el = document.createElement('div');
-        el.className = `card ${get('effect','')}`; el.textContent = item.t;
-        el.style.width = cSize + 'px'; el.style.height = cSize + 'px';
-        el.style.backgroundImage = `url('${get('cimg','')}')`;
-        el.style.fontSize = get('fsize', '25') + 'px'; el.style.color = get('fcolor', '#ffffff');
+        el.className = `card ${get('effect','')}`; 
+        el.innerText = item.t;
+        el.style.cssText = `width:${cSize}px; height:${cSize}px; background-image:url('${get('cimg','')}'); font-size:${fSize}px; color:${get('fcolor','#fff')};`;
+        
         el.onclick = () => {
             if(selected.length < 2 && !el.dataset.done) {
                 el.style.outline = "4px solid white";
@@ -104,10 +120,11 @@
             }
         };
         const cObj = { el, x: Math.random()*(window.innerWidth-cSize), y: Math.random()*(window.innerHeight-cSize), vx: (Math.random()-0.5)*speed, vy: (Math.random()-0.5)*speed };
-        document.getElementById('game').appendChild(el); cards.push(cObj);
+        document.getElementById('game').appendChild(el);
+        cards.push(cObj);
     });
 
-    function startGame() { document.getElementById('start-screen').style.display = 'none'; gameStarted = true; loop(); }
+    function startGame() { document.getElementById('start-screen').style.display='none'; gameStarted=true; loop(); }
     function loop() {
         if(!gameStarted) return;
         cards.forEach(c => {
