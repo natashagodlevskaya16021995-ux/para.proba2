@@ -10,25 +10,40 @@
         .life { width: 30px; height: 30px; background-size: contain; background-repeat: no-repeat; transition: 0.3s; }
         #p-wrap { width: 200px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
         #p-bar { width: 0%; height: 100%; transition: 0.3s; }
-        .card { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 10px; box-sizing: border-box; user-select: none; transition: outline 0.1s; }
+        .card { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 10px; box-sizing: border-box; user-select: none; }
+        
         .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; color: white; text-align: center; padding: 20px; background: rgba(0,0,0,0.95); }
         .overlay img { max-height: 200px; margin-bottom: 20px; border-radius: 15px; display: none; }
-        button { padding: 15px 30px; cursor: pointer; border-radius: 10px; border: none; font-weight: bold; font-size: 18px; color: #000; }
+        /* КНОПКА ТЕПЕРЬ ВСЕГДА ВИДИМА */
+        .rb { margin-top: 20px; padding: 15px 40px; cursor: pointer; border-radius: 10px; border: none; font-weight: bold; font-size: 20px; color: #000; display: block !important; }
+        #st-b { padding: 15px 40px; cursor: pointer; border-radius: 10px; border: none; font-weight: bold; font-size: 20px; color: #000; }
         #fb { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); width: 160px; height: 160px; z-index: 1000; transition: 0.3s; pointer-events: none; }
     </style>
 </head>
 <body>
     <div id="ui"><div id="lives"></div><div id="p-wrap"><div id="p-bar"></div></div></div>
     <div id="game"></div><img id="fb">
+
     <div id="start-screen" class="overlay"><h1 id="st-t"></h1><p id="st-d"></p><button id="st-b" onclick="startGame()"></button></div>
-    <div id="win-screen" class="overlay" style="display:none;"><img id="wi-img"><h1 id="wt"></h1><p id="wd"></h1><button class="rb" onclick="location.reload()"></button></div>
-    <div id="lose-screen" class="overlay" style="display:none;"><img id="li-img"><h1 id="lt"></h1><p id="ld"></h1><button class="rb" onclick="location.reload()"></button></div>
+    
+    <div id="win-screen" class="overlay" style="display:none;">
+        <img id="wi-img">
+        <h1 id="wt"></h1>
+        <p id="wd"></p>
+        <button class="rb" onclick="location.reload()"></button>
+    </div>
+    
+    <div id="lose-screen" class="overlay" style="display:none;">
+        <img id="li-img">
+        <h1 id="lt"></h1>
+        <p id="ld"></p>
+        <button class="rb" onclick="location.reload()"></button>
+    </div>
 
 <script>
     const params = new URLSearchParams(window.location.search);
     const get = (n, d) => { let v = params.get(n); return (v===null||v==='null'||v==='') ? d : v; };
 
-    // Шрифт и Эффекты
     const font = get('font', 'Arial');
     if (font !== 'Arial') {
         const link = document.createElement('link');
@@ -38,7 +53,7 @@
         document.body.style.fontFamily = `'${font}', sans-serif`;
     }
 
-    // Тексты
+    // Заполнение текстов
     document.getElementById('st-t').innerText = get('st_t', 'Привет!');
     document.getElementById('st-d').innerText = get('st_d', 'Найди пары');
     document.getElementById('st-b').innerText = get('st_b', 'ИГРАТЬ');
@@ -47,29 +62,27 @@
     document.getElementById('wd').innerText = get('wd', 'Молодец!');
     document.getElementById('lt').innerText = get('lt', 'Ой!');
     document.getElementById('ld').innerText = get('ld', 'Попробуй еще раз');
-    document.querySelectorAll('.rb').forEach(b => { b.innerText = get('rb', 'ЗАНОВО'); b.style.background = get('pcolor', '#03dac6'); });
+    
+    // Текст на кнопках рестарта
+    const rbText = get('rb', 'ЗАНОВО');
+    document.querySelectorAll('.rb').forEach(b => { 
+        b.innerText = rbText; 
+        b.style.background = get('pcolor', '#03dac6'); 
+    });
 
-    // Финальные картинки
     if(get('wi')) { const i=document.getElementById('wi-img'); i.src=get('wi'); i.style.display='block'; }
     if(get('li')) { const i=document.getElementById('li-img'); i.src=get('li'); i.style.display='block'; }
 
-    // ЛОГИКА РАНДОМА И ПУСТЫШЕК
     let allData = []; try { allData = JSON.parse(get('all_data', '[]')); } catch(e) {}
     allData.sort(() => Math.random() - 0.5);
-    
     const limit = parseInt(get('limit', 2));
     const extraCount = parseInt(get('extra_c', 0));
-    
     const activePairs = allData.slice(0, limit);
     const remaining = allData.slice(limit);
     
     let deck = [];
-    activePairs.forEach((p, i) => { 
-        deck.push({t: p.a, id: i}); 
-        deck.push({t: p.b, id: i}); 
-    });
-
-    // Делаем ловушки строго одиночками
+    activePairs.forEach((p, i) => { deck.push({t: p.a, id: i}); deck.push({t: p.b, id: i}); });
+    
     let trapPool = [];
     remaining.forEach(p => { trapPool.push(Math.random() > 0.5 ? p.a : p.b); });
     trapPool.sort(() => Math.random() - 0.5);
@@ -78,7 +91,6 @@
 
     deck.sort(() => Math.random() - 0.5);
 
-    // Параметры карточек
     const speed = parseFloat(get('speed', 2));
     const cSize = parseInt(get('csize', 140));
     const fSize = get('fsize', '25');
@@ -90,10 +102,8 @@
 
     deck.forEach(item => {
         const el = document.createElement('div');
-        el.className = `card ${get('effect','')}`; 
-        el.innerText = item.t;
+        el.className = `card ${get('effect','')}`; el.innerText = item.t;
         el.style.cssText = `width:${cSize}px; height:${cSize}px; background-image:url('${get('cimg','')}'); font-size:${fSize}px; color:${get('fcolor','#fff')};`;
-        
         el.onclick = () => {
             if(selected.length < 2 && !el.dataset.done) {
                 el.style.outline = "4px solid white";
@@ -120,8 +130,7 @@
             }
         };
         const cObj = { el, x: Math.random()*(window.innerWidth-cSize), y: Math.random()*(window.innerHeight-cSize), vx: (Math.random()-0.5)*speed, vy: (Math.random()-0.5)*speed };
-        document.getElementById('game').appendChild(el);
-        cards.push(cObj);
+        document.getElementById('game').appendChild(el); cards.push(cObj);
     });
 
     function startGame() { document.getElementById('start-screen').style.display='none'; gameStarted=true; loop(); }
