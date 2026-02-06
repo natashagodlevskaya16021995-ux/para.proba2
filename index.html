@@ -10,7 +10,9 @@
         #p-wrap { width: 200px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
         #p-bar { width: 0%; height: 100%; transition: 0.3s; }
         .card { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 10px; box-sizing: border-box; user-select: none; }
-        .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; color: white; text-align: center; padding: 20px; background: rgba(0,0,0,0.9); }
+        
+        .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; color: white; text-align: center; padding: 20px; background: rgba(0,0,0,0.95); }
+        .overlay img { max-height: 250px; margin-bottom: 20px; border-radius: 15px; display: none; }
         button { padding: 15px 30px; cursor: pointer; border-radius: 10px; border: none; font-weight: bold; font-size: 18px; color: #000; }
         #fb { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); width: 160px; height: 160px; z-index: 1000; transition: 0.3s; pointer-events: none; }
     </style>
@@ -18,15 +20,26 @@
 <body>
     <div id="ui"><div id="lives"></div><div id="p-wrap"><div id="p-bar"></div></div></div>
     <div id="game"></div><img id="fb">
+
     <div id="start-screen" class="overlay"><h1 id="st-t"></h1><p id="st-d"></p><button id="st-b" onclick="startGame()"></button></div>
-    <div id="win-screen" class="overlay" style="display:none;"><img id="wi" style="max-height:150px"><h1 id="wt"></h1><p id="wd"></p><button class="rb" onclick="location.reload()"></button></div>
-    <div id="lose-screen" class="overlay" style="display:none;"><img id="li" style="max-height:150px"><h1 id="lt"></h1><p id="ld"></p><button class="rb" onclick="location.reload()"></button></div>
+    
+    <div id="win-screen" class="overlay" style="display:none;">
+        <img id="wi-img" src="">
+        <h1 id="wt"></h1><p id="wd"></p>
+        <button class="rb" onclick="location.reload()"></button>
+    </div>
+    
+    <div id="lose-screen" class="overlay" style="display:none;">
+        <img id="li-img" src="">
+        <h1 id="lt"></h1><p id="ld"></p>
+        <button class="rb" onclick="location.reload()"></button>
+    </div>
 
 <script>
     const params = new URLSearchParams(window.location.search);
     const get = (n, d) => { let v = params.get(n); return (v===null||v==='null'||v==='') ? d : v; };
 
-    // Настройка интерфейса
+    // Интерфейс
     document.getElementById('st-t').textContent = get('st_t', 'Привет!');
     document.getElementById('st-d').textContent = get('st_d', 'Найди пары');
     document.getElementById('st-b').textContent = get('st_b', 'ИГРАТЬ');
@@ -36,25 +49,20 @@
     document.getElementById('lt').textContent = get('lt', 'Ой!');
     document.getElementById('ld').textContent = get('ld', 'Попробуй еще раз');
     document.querySelectorAll('.rb').forEach(b => { b.textContent = get('rb', 'ЗАНОВО'); b.style.background = get('pcolor', '#03dac6'); });
-    if(get('wi')) document.getElementById('wi').src = get('wi');
-    if(get('li')) document.getElementById('li').src = get('li');
 
-    // Логика рандомизации ПРЯМО В ДВИЖКЕ
-    let allData = [];
-    try { allData = JSON.parse(get('all_data', '[]')); } catch(e) {}
-    
-    // Перемешиваем всю базу
+    // Картинки финала
+    const wi = get('wi'); if(wi) { const i = document.getElementById('wi-img'); i.src = wi; i.style.display = 'block'; }
+    const li = get('li'); if(li) { const i = document.getElementById('li-img'); i.src = li; i.style.display = 'block'; }
+
+    // Логика данных
+    let allData = []; try { allData = JSON.parse(get('all_data', '[]')); } catch(e) {}
     allData.sort(() => Math.random() - 0.5);
     
     const limit = parseInt(get('limit', 2));
     const extraCount = parseInt(get('extra_c', 2));
-    
-    // Выбираем игровые пары
     const activePairs = allData.slice(0, limit);
-    // Выбираем ловушки из оставшихся
     const rejected = allData.slice(limit);
-    let trapPool = [];
-    rejected.forEach(p => { trapPool.push(Math.random() > 0.5 ? p.a : p.b); });
+    let trapPool = []; rejected.forEach(p => { trapPool.push(p.a); trapPool.push(p.b); });
     trapPool.sort(() => Math.random() - 0.5);
     const traps = trapPool.slice(0, extraCount);
 
@@ -63,7 +71,6 @@
     traps.forEach((t, i) => { deck.push({t: t, id: -100 - i}); });
     deck.sort(() => Math.random() - 0.5);
 
-    // Отрисовка
     const speed = parseFloat(get('speed', 2));
     const cSize = parseInt(get('csize', 140));
     let lives = 3, found = 0, selected = [], cards = [], gameStarted = false;
